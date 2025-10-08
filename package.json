@@ -1,0 +1,30 @@
+{
+  "name": "ai-mail-checker",
+  "version": "0.3.0",
+  "description": "CLI and web UI to check email HTML templates for broken links, responsiveness, and content quality with optional AI analysis",
+  "bin": {
+    "ai-mail-checker": "index.js"
+  },
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js --serve --port 3000",
+    "serve": "node index.js --serve --port 3000",
+    "cli": "node index.js",
+    "install-puppeteer": "npm i puppeteer"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^22.15.0"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "keywords": [
+    "email",
+    "html",
+    "checker",
+    "broken-links",
+    "responsive",
+    "ai"
+  ],
+  "license": "MIT"
+}
