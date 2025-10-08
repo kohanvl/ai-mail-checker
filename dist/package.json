@@ -10,8 +10,7 @@
     "start": "node index.js --serve --port 3000",
     "serve": "node index.js --serve --port 3000",
     "cli": "node index.js",
-    "install-puppeteer": "npm i puppeteer",
-    "build": "node scripts/build.js"
+    "install-puppeteer": "npm i puppeteer"
   },
   "optionalDependencies": {
     "puppeteer": "^22.15.0"
