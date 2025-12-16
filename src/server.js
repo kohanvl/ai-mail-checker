@@ -1,15 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const {checkHtmlLinks} = require('./checker');
-const {checkResponsiveHtml} = require('./responsive');
-const {runContentChecks} = require('./contentChecks');
-const {analyzeEmailWithAI} = require('./ai');
-const {buildReport} = require('./report');
-const {checkDomainDns} = require('./dnsChecks');
-const {analyzeAccessibility} = require('./accessibility');
-const {analyzeRtl} = require('./rtl');
-const {analyzeJinja} = require('./jinja');
+const {runAllChecks} = require('./checkApi');
 
 function readRequestBody(req, limitBytes = 2 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
@@ -97,121 +89,26 @@ function startServer({
           res.end(JSON.stringify({error: 'Unsupported Content-Type'}));
           return;
         }
-        const {html, includeRelative, responsive, content, ai} = payload || {};
-        if (!html || typeof html !== 'string') {
-          res.statusCode = 400;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({error: 'Missing html'}));
-          return;
-        }
-        const data = await checkHtmlLinks(html, {
-          base: payload.base || base || null,
-          includeRelative: !!includeRelative,
-          timeoutMs: Number(payload.timeoutMs) || timeoutMs,
-          concurrency: Number(payload.concurrency) || concurrency,
+        const result = await runAllChecks(payload, {
+          base,
+          concurrency,
+          timeoutMs,
         });
-        let resp = null;
-        if (responsive) {
-          try {
-            resp = await checkResponsiveHtml(html, {});
-          } catch (e) {
-            resp = {
-              supported: false,
-              error:
-                (e && (e.message || String(e))) || 'responsive check failed',
-            };
-          }
-        }
-        let contentOut = null;
-        if (content) {
-          try {
-            contentOut = runContentChecks(html);
-          } catch (e) {
-            contentOut = {
-              error: (e && (e.message || String(e))) || 'content checks failed',
-            };
-          }
-        }
-        let aiOut = null;
-        if (ai) {
-          const r = await analyzeEmailWithAI(html);
-          aiOut = r;
-        }
-
-        let dnsOut = null;
-        try {
-          dnsOut = await checkDomainDns(payload.domain, payload.dkimSelectors);
-        } catch (e) {
-          dnsOut = {
-            domain: payload.domain || '',
-            error: e?.message || String(e) || 'dns check failed',
-          };
-        }
-
-        let accessibilityOut = null;
-        try {
-          accessibilityOut = analyzeAccessibility(html);
-        } catch (e) {
-          accessibilityOut = {
-            error: e?.message || String(e) || 'accessibility check failed',
-          };
-        }
-
-        let rtlOut = null;
-        try {
-          rtlOut = analyzeRtl(html);
-        } catch (e) {
-          rtlOut = {
-            error: e?.message || String(e) || 'rtl check failed',
-          };
-        }
-
-        let jinjaOut = null;
-        try {
-          jinjaOut = analyzeJinja(html);
-        } catch (e) {
-          jinjaOut = {
-            error: e?.message || String(e) || 'jinja check failed',
-          };
-        }
-
-        // MVP report
-        const report = buildReport({
-          campaign: payload.campaign,
-          html,
-          subject: payload.subject,
-          preheader: payload.preheader,
-          senderName: payload.senderName,
-          replyTo: payload.replyTo,
-          domain: payload.domain,
-          dns: dnsOut,
-          accessibility: accessibilityOut,
-          rtl: rtlOut,
-          jinja: jinjaOut,
-        });
-
         res.setHeader('Content-Type', 'application/json');
-        res.end(
-          JSON.stringify({
-            links: data,
-            responsive: resp,
-            content: contentOut,
-            ai: aiOut,
-            dns: dnsOut,
-            accessibility: accessibilityOut,
-            rtl: rtlOut,
-            jinja: jinjaOut,
-            report,
-          }),
-        );
+        res.end(JSON.stringify(result));
       } catch (e) {
         console.error(
           'API /api/check error:',
           (e && (e.stack || e.message)) || e,
         );
-        res.statusCode = 500;
+        const status = e?.statusCode || 500;
+        res.statusCode = status;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({error: e?.message || String(e)}));
+        res.end(
+          JSON.stringify({
+            error: e?.message || String(e) || 'Internal Server Error',
+          }),
+        );
       }
       return;
     }

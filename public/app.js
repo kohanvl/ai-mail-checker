@@ -71,11 +71,32 @@ const dnsSpf = $('#dnsSpf');
 const dnsDmarc = $('#dnsDmarc');
 const dnsDkim = $('#dnsDkim');
 const reportWrap = $('#reportTab');
-const reportJson = $('#reportJson');
 const reportHuman =
   typeof document !== 'undefined'
     ? document.querySelector('#reportHuman')
     : null;
+const previewFrames = {
+  normal: document.getElementById('previewNormal'),
+  apple: document.getElementById('previewApple'),
+  gmail: document.getElementById('previewGmail'),
+  outlook: document.getElementById('previewOutlook'),
+};
+let lastPreviewHtml = '';
+
+const apiBase = (() => {
+  if (typeof window !== 'undefined' && window.API_BASE_URL) {
+    return window.API_BASE_URL.replace(/\/$/, '');
+  }
+  if (typeof location !== 'undefined' && location.protocol === 'file:') {
+    return 'http://localhost:3000';
+  }
+  return '';
+})();
+
+const resolveApi = (path) => {
+  const suffix = path.startsWith('/') ? path : '/' + path;
+  return apiBase ? apiBase + suffix : suffix;
+};
 
 // Hero gauge
 const heroCard = $('#heroCard');
@@ -83,6 +104,72 @@ const gauge = $('#gauge');
 const gaugeVal = $('#gaugeVal');
 const badgeSummary = $('#badgeSummary');
 const heroSummary = $('#heroSummary');
+
+const formatReadinessCopy = (score) => {
+  if (!Number.isFinite(score)) return 'Overall readiness — awaiting score';
+  if (score >= 90) return `Overall readiness: ${score}% — Stellar work!`;
+  if (score >= 70)
+    return `Overall readiness: ${score}% — Nearly there, just light polish.`;
+  if (score >= 40)
+    return `Overall readiness: ${score}% — On the right track, keep going!`;
+  return `Overall readiness: ${score}% — Early days, but we'll get there.`;
+};
+
+function applyDarkModeMode(doc, mode) {
+  const style = doc.createElement('style');
+  style.setAttribute('data-ai-mail-checker-dark', mode);
+  if (mode === 'apple') {
+    style.textContent = `
+      :root { color-scheme: dark; }
+      html, body { background: #000 !important; color: #d5d9e2 !important; }
+      body, table, td, p, span, a, li, div, h1, h2, h3, h4, h5, h6 {
+        color: #d5d9e2 !important;
+      }
+      a { color: #8fb8ff !important; }
+      img, picture, video, canvas, svg { filter: none !important; mix-blend-mode: normal !important; }
+    `;
+  } else if (mode === 'gmail') {
+    style.textContent = `
+      :root { color-scheme: dark; }
+      html, body { background: #121212 !important; color: #e4e6eb !important; }
+      body * { color: inherit !important; text-shadow: 0 0 0.65px rgba(0, 0, 0, 0.65); }
+      table, td, div { background-color: rgba(18, 18, 18, 0.92) !important; }
+      img, picture, video, canvas, svg { filter: none !important; }
+    `;
+  } else if (mode === 'outlook') {
+    style.textContent = `
+      :root { color-scheme: dark; }
+      html { background: #0b1220 !important; filter: invert(1) hue-rotate(180deg) !important; }
+      body { background: transparent !important; }
+      img, picture, video, canvas, svg, iframe, object { filter: invert(1) hue-rotate(180deg) !important; }
+    `;
+  }
+  (doc.head || doc.documentElement).appendChild(style);
+}
+
+function renderIframePreview(frame, html, {mode = 'normal'} = {}) {
+  if (!frame || !frame.contentDocument) return;
+  const doc = frame.contentDocument;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  if (mode !== 'normal') {
+    try {
+      applyDarkModeMode(doc, mode);
+    } catch (_) {
+      // ignore injection errors
+    }
+  }
+}
+
+function renderDarkModePreviews(html) {
+  lastPreviewHtml = html;
+  renderIframePreview(previewFrames.normal, html, {mode: 'normal'});
+  renderIframePreview(previewFrames.apple, html, {mode: 'apple'});
+  renderIframePreview(previewFrames.gmail, html, {mode: 'gmail'});
+  renderIframePreview(previewFrames.outlook, html, {mode: 'outlook'});
+}
 
 function extractAndPrefill(rawHtml) {
   try {
@@ -170,11 +257,18 @@ clearBtn.addEventListener('click', () => {
   if (dnsSpf) dnsSpf.innerHTML = '';
   if (dnsDmarc) dnsDmarc.innerHTML = '';
   if (dnsDkim) dnsDkim.innerHTML = '';
-  if (reportJson) reportJson.textContent = '';
   if (reportHuman) reportHuman.innerHTML = '';
   heroCard.hidden = true;
   if (gauge) gauge.style.setProperty('--p', '0%');
   if (gaugeVal) gaugeVal.textContent = '0';
+  lastPreviewHtml = '';
+  Object.values(previewFrames).forEach((frame) => {
+    if (frame && frame.contentDocument) {
+      frame.contentDocument.open();
+      frame.contentDocument.write('');
+      frame.contentDocument.close();
+    }
+  });
   activateTab('linksTab');
 });
 
@@ -209,7 +303,6 @@ runBtn.addEventListener('click', async () => {
   if (dnsSpf) dnsSpf.innerHTML = '';
   if (dnsDmarc) dnsDmarc.innerHTML = '';
   if (dnsDkim) dnsDkim.innerHTML = '';
-  if (reportJson) reportJson.textContent = '';
   heroCard.hidden = true;
   if (gauge) gauge.style.setProperty('--p', '0%');
   if (gaugeVal) gaugeVal.textContent = '0';
@@ -232,7 +325,7 @@ runBtn.addEventListener('click', async () => {
       domain: (domainInput?.value || '').trim(),
       dkimSelectors: (dkimInput?.value || '').trim(),
     };
-    const r = await fetch('/api/check', {
+    const r = await fetch(resolveApi('/api/check'), {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload),
@@ -357,10 +450,7 @@ runBtn.addEventListener('click', async () => {
 
         const metrics = acc.metrics || {};
         const metricsLines = [
-          'Main landmark: ' + (metrics.hasMain ? '✅' : '❌'),
-          'Header landmark: ' + (metrics.hasHeader ? '✅' : '❌'),
-          'Footer landmark: ' + (metrics.hasFooter ? '✅' : '❌'),
-          'Navigation landmarks: ' + (metrics.navCount || 0),
+          'Проверка <header>/<footer>/<main>/<nav> отключена',
           'Кликабельных без role: ' + (metrics.interactiveWithoutRole || 0),
           'Ссылок без имени: ' + (metrics.anchorsWithoutLabel || 0),
           'Кнопок без имени: ' + (metrics.buttonsWithoutLabel || 0),
@@ -454,7 +544,7 @@ runBtn.addEventListener('click', async () => {
       } else {
         const summaryLines = Array.isArray(jinja.summary) && jinja.summary.length
           ? jinja.summary
-          : ['Jinja выражения не найдены.'];
+          : [];
         jinjaSummary.textContent = summaryLines.join(' ');
 
         if (Array.isArray(jinja.warnings) && jinja.warnings.length) {
@@ -637,40 +727,90 @@ runBtn.addEventListener('click', async () => {
       if (!data.responsive.supported) {
         respSummary.textContent = 'Responsive: ' + data.responsive.error;
       } else {
-        respSummary.textContent =
-          'Responsive: meta viewport ' +
-          (data.responsive.metaViewportPresent ? 'present' : 'missing');
-        const parts = data.responsive.viewports.map(
-          (v) =>
-            'Width ' +
-            v.width +
-            'px: overflowX=' +
-            v.overflowX +
-            ', too wide elements=' +
-            v.tooWide.length +
-            ', small text=' +
-            v.smallText.length,
-        );
-        respDetails.innerHTML =
-          '<div>' +
-          parts.map((p) => '<div>' + p + '</div>').join('') +
-          '</div>';
-        const imgs = [];
-        data.responsive.viewports.forEach((v) => {
-          if (v.screenshotBase64) {
-            imgs.push(
-              '<figure style="margin:0">' +
-                '<div style="font-size:11px;color:#64748b;margin-bottom:4px">' +
-                v.width +
-                'px</div>' +
-                '<img style="max-width:280px;border:1px solid #e5e7eb;border-radius:8px" src="data:image/png;base64,' +
-                v.screenshotBase64 +
-                '" />' +
-                '</figure>',
-            );
-          }
-        });
-        respShots.innerHTML = imgs.join('');
+        const viewports = Array.isArray(data.responsive.viewports)
+          ? data.responsive.viewports
+          : [];
+        const problematic = Array.isArray(data.responsive.problematic)
+          ? data.responsive.problematic
+          : viewports.filter((v) => v.problematic);
+        const baselineWidth =
+          (data.responsive.baseline && data.responsive.baseline.width) || null;
+        const metaText =
+          'тег meta viewport ' +
+          (data.responsive.metaViewportPresent ? 'найден' : 'не найден');
+
+        if (!problematic.length) {
+          respSummary.textContent =
+            'Проблемные девайсы не найдены, ' +
+            metaText +
+            (baselineWidth ? ' (база ' + baselineWidth + 'px)' : '');
+          respDetails.innerHTML =
+            '<div>Все ' +
+            viewports.length +
+            ' проверенных разрешения без критичных отклонений.</div>';
+          respShots.innerHTML = '';
+        } else {
+          respSummary.textContent =
+            'Проблемные девайсы (' +
+            problematic.length +
+            '/' +
+            viewports.length +
+            '): ' +
+            problematic
+              .map((v) => (v.width ? v.width + 'px' : 'unknown'))
+              .join(', ') +
+            ' · ' +
+            metaText;
+
+          const reasonMap = {
+            layout_overflow: 'горизонтальный скролл/выезд контента',
+            too_wide_elements: 'элементы шире экрана',
+            small_text: 'слишком мелкий текст',
+          };
+
+          const detail = problematic
+            .map((v) => {
+              const reasonText = Array.isArray(v.reasons)
+                ? v.reasons
+                    .map((r) => reasonMap[r.type] || r.type)
+                    .join(', ')
+                : '';
+              const overflow = v.overflowPercent
+                ? Math.round(v.overflowPercent * 10) / 10
+                : 0;
+              return (
+                '<div style="margin-bottom:6px">' +
+                '<strong>' +
+                (v.width || '?') +
+                'px</strong>: ' +
+                (reasonText || 'проблема не детализирована') +
+                (overflow > 0 ? ' (overflow ~' + overflow + '%)' : '') +
+                '</div>'
+              );
+            })
+            .join('');
+
+          respDetails.innerHTML = '<div>' + detail + '</div>';
+
+          const imgs = [];
+          problematic.forEach((v) => {
+            if (v.screenshotBase64) {
+              imgs.push(
+                '<figure style="margin:0">' +
+                  '<div style="font-size:11px;color:#64748b;margin-bottom:4px">' +
+                  (v.width || '?') +
+                  'px</div>' +
+                  '<img style="max-width:280px;border:1px solid #e5e7eb;border-radius:8px" src="data:image/png;base64,' +
+                  v.screenshotBase64 +
+                  '" />' +
+                  '</figure>',
+              );
+            }
+          });
+          respShots.innerHTML =
+            imgs.join('') ||
+            '<div style="color:#64748b">Нет скриншотов для проблемных девайсов.</div>';
+        }
       }
     }
 
@@ -678,18 +818,30 @@ runBtn.addEventListener('click', async () => {
     if (data.ai) {
       if (!data.ai.supported) {
         aiSummary.textContent = 'AI: ' + (data.ai.error || 'unavailable');
+        aiDetails.innerHTML = '';
       } else {
         const rj = data.ai.result || {};
-        aiSummary.textContent = rj.summary || '';
-        const lines = [];
-        if (Array.isArray(rj.issues) && rj.issues.length)
-          lines.push('Issues: ' + rj.issues.join(' · '));
-        if (Array.isArray(rj.suggestions) && rj.suggestions.length)
-          lines.push('Suggestions: ' + rj.suggestions.join(' · '));
-        aiDetails.innerHTML =
-          '<div>' +
-          lines.map((x) => '<div>' + x + '</div>').join('') +
-          '</div>';
+        const reportText = String(rj.report || '').trim();
+        const summaryText = String(rj.summary || '').trim();
+        if (reportText) {
+          aiSummary.textContent =
+            summaryText || 'AI report ready — see details below.';
+          aiDetails.innerHTML =
+            '<pre style="white-space:pre-wrap; margin:0; font-size:12px; line-height:1.5; color:#334155; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0">' +
+            escapeHtml(reportText) +
+            '</pre>';
+        } else {
+          aiSummary.textContent = summaryText || '';
+          const lines = [];
+          if (Array.isArray(rj.issues) && rj.issues.length)
+            lines.push('Issues: ' + rj.issues.join(' · '));
+          if (Array.isArray(rj.suggestions) && rj.suggestions.length)
+            lines.push('Suggestions: ' + rj.suggestions.join(' · '));
+          aiDetails.innerHTML =
+            '<div>' +
+            lines.map((x) => '<div>' + x + '</div>').join('') +
+            '</div>';
+        }
       }
     }
 
@@ -707,8 +859,7 @@ runBtn.addEventListener('click', async () => {
         gauge.style.setProperty('--p', score + '%');
       }
       if (gaugeVal) gaugeVal.textContent = String(score);
-      if (badgeSummary)
-        badgeSummary.textContent = 'Overall readiness: ' + score + '%';
+      if (badgeSummary) badgeSummary.textContent = formatReadinessCopy(score);
       if (heroSummary)
         heroSummary.textContent =
           'Errors: ' +
@@ -718,8 +869,6 @@ runBtn.addEventListener('click', async () => {
           ', Passed: ' +
           data.report.passed.length;
       heroCard.hidden = false;
-      if (reportJson)
-        reportJson.textContent = JSON.stringify(data.report, null, 2);
       if (reportHuman) {
         const r = data.report;
         const esc = (s) =>
@@ -855,8 +1004,54 @@ runBtn.addEventListener('click', async () => {
                 .join('') +
               '</ul>'
             : '<div style="color:#64748b">Нет</div>';
+        const structured = r.structured_summary || {};
+        const renderSummary = () => {
+          const d = structured.deliverability?.status || '—';
+          const c = structured.content?.status || '—';
+          const imgs =
+            structured.images && structured.images.issues != null
+              ? structured.images.issues
+              : '—';
+          const jinjaIssues =
+            structured.jinja && structured.jinja.issues != null
+              ? structured.jinja.issues
+              : '—';
+          const labelIssues = (val) =>
+            val === '—' ? '—' : val + ' issues';
+          return (
+            '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;background:#f8fafc;margin-bottom:10px">' +
+            '<div style="font-weight:700;color:#0f172a;margin-bottom:6px">Summary</div>' +
+            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">' +
+            '<div><div style="font-size:11px;color:#64748b">Deliverability</div><div style="font-weight:700;color:#0f172a">' +
+            esc(d) +
+            '</div></div>' +
+            '<div><div style="font-size:11px;color:#64748b">Content</div><div style="font-weight:700;color:#0f172a">' +
+            esc(c) +
+            '</div></div>' +
+            '<div><div style="font-size:11px;color:#64748b">Images</div><div style="font-weight:700;color:#0f172a">' +
+            esc(labelIssues(imgs)) +
+            '</div></div>' +
+            '<div><div style="font-size:11px;color:#64748b">Jinja</div><div style="font-weight:700;color:#0f172a">' +
+            esc(labelIssues(jinjaIssues)) +
+            '</div></div>' +
+            '</div>' +
+            '</div>'
+          );
+        };
+        const actions = Array.isArray(r.action_items) ? r.action_items : [];
+        const renderActions = () =>
+          '<div style="margin:12px 0 8px">' +
+          '<div style="font-weight:700;color:#0f172a;margin-bottom:4px">Action items</div>' +
+          (actions.length
+            ? '<ul style="margin:0;padding-left:18px;line-height:1.5;color:#0f172a">' +
+              actions.map((a) => '<li>' + esc(a) + '</li>').join('') +
+              '</ul>'
+            : '<div style="color:#64748b">Нет явных действий</div>') +
+          '</div>';
         reportHuman.innerHTML =
           '<div>' +
+          renderSummary() +
+          renderActions() +
           '<div style="font-weight:600;color:#111827">Ошибки (' +
           r.errors.length +
           ')</div>' +
@@ -873,42 +1068,18 @@ runBtn.addEventListener('click', async () => {
       }
     }
 
-    // Update preview iframes
-    const light = document.getElementById('previewLight');
-    const dark = document.getElementById('previewDark');
-    if (light && light.contentDocument) {
-      light.contentDocument.open();
-      light.contentDocument.write(html);
-      light.contentDocument.close();
-    }
-    if (dark && dark.contentDocument) {
-      // Write original HTML first
-      dark.contentDocument.open();
-      dark.contentDocument.write(html);
-      dark.contentDocument.close();
-
-      // Inject inversion CSS to emulate dark mode preview
-      try {
-        const doc = dark.contentDocument;
-        const style = doc.createElement('style');
-        style.setAttribute('data-ai-mail-checker-dark', '');
-        style.textContent = `
-          :root { color-scheme: dark; }
-          html, body { background: #0b1220 !important; }
-          html { filter: invert(1) hue-rotate(180deg); }
-          img, picture, video, canvas, svg, iframe, object, embed { filter: invert(1) hue-rotate(180deg) !important; }
-          [data-no-invert], .no-invert { filter: none !important; }
-        `;
-        (doc.head || doc.documentElement).appendChild(style);
-      } catch (_) {
-        // best-effort; ignore injection errors
-      }
-    }
+    // Update preview iframes (Normal, Apple Mail, Gmail, Outlook)
+    renderDarkModePreviews(html);
 
     // show first tab by default
     activateTab('linksTab');
   } catch (e) {
-    alert('Error: ' + (e && e.message));
+    const msg = (e && e.message) || String(e) || 'Unknown error';
+    const hint =
+      typeof location !== 'undefined' && location.protocol === 'file:'
+        ? '\n\nHint: run `npm run serve` and open http://localhost:3000/ (or set window.API_BASE_URL).'
+        : '';
+    alert('Error: ' + msg + hint);
   } finally {
     runBtn.disabled = false;
     runBtn.textContent = 'Run check';

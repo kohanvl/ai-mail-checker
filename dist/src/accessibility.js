@@ -1,3 +1,5 @@
+const {extractLinks} = require('./checker');
+
 const KNOWN_ROLES = new Set([
   'alert',
   'alertdialog',
@@ -68,6 +70,8 @@ const KNOWN_ROLES = new Set([
   'treeitem',
 ]);
 
+const MAX_INLINE_IMAGE_BYTES = 500 * 1024; // 500KB to avoid oversized inline assets in emails
+
 function stripTags(value) {
   return String(value || '').replace(/<[^>]*>/g, ' ');
 }
@@ -85,32 +89,47 @@ function hasAccessibleName(startTag, innerText) {
   return collapseWhitespace(innerText).length > 0;
 }
 
-function analyzeAccessibility(html) {
+function normalizeFormat(format) {
+  const value = String(format || '').toLowerCase().trim();
+  if (!value) return 'email';
+  if (value.includes('web') || value.includes('site') || value.includes('page')) return 'web';
+  if (value.includes('email')) return 'email';
+  return 'email';
+}
+
+function parseDataUriBytes(src) {
+  const match = String(src || '').match(/^data:[^;]+;base64,([\s\S]+)/i);
+  if (!match) return null;
+  const b64 = match[1].trim();
+  if (!b64) return 0;
+  return Math.floor((b64.length * 3) / 4);
+}
+
+function retinaStats(imgTags) {
+  let total = 0;
+  let optimized = 0;
+  imgTags.forEach((tag) => {
+    total += 1;
+    const srcMatch = tag.match(/\bsrc=["']([^"']+)["']/i);
+    const srcsetMatch = tag.match(/\bsrcset=["']([^"']+)["']/i);
+    const src = (srcMatch && srcMatch[1]) || '';
+    const srcset = (srcsetMatch && srcsetMatch[1]) || '';
+    const isSvg = /\.svg(\?|#|$)/i.test(src);
+    const has2xInSrc = /(@2x|-2x|_2x)\./i.test(src);
+    const has2xInSrcset = /\s+2x(,|\s|$)/i.test(srcset);
+    if (isSvg || has2xInSrc || has2xInSrcset) optimized += 1;
+  });
+  return {total, optimized, unoptimized: Math.max(0, total - optimized)};
+}
+
+function analyzeAccessibility(html, options = {}) {
+  const format = normalizeFormat(options.format);
+  const isEmail = format === 'email';
   const warnings = [];
   const passed = [];
   const summary = [];
 
   const text = String(html || '');
-
-  const hasMain = /<main\b/i.test(text) || /role\s*=\s*["']main["']/i.test(text);
-  if (!hasMain)
-    warnings.push({type: 'missing_landmark_main', recommendation: 'Добавьте <main> или role="main" для основного содержимого'});
-  else passed.push('landmark_main');
-
-  const hasHeader = /<header\b/i.test(text) || /role\s*=\s*["']banner["']/i.test(text);
-  if (!hasHeader)
-    warnings.push({type: 'missing_landmark_header', recommendation: 'Рассмотрите использование <header> или role="banner"'});
-  else passed.push('landmark_header');
-
-  const hasFooter = /<footer\b/i.test(text) || /role\s*=\s*["']contentinfo["']/i.test(text);
-  if (!hasFooter)
-    warnings.push({type: 'missing_landmark_footer', recommendation: 'Рассмотрите использование <footer> или role="contentinfo"'});
-  else passed.push('landmark_footer');
-
-  const navCount = (text.match(/<nav\b/gi) || []).length + (text.match(/role\s*=\s*["']navigation["']/gi) || []).length;
-  if (!navCount)
-    warnings.push({type: 'missing_landmark_navigation', recommendation: 'Добавьте <nav> или role="navigation" для основного меню'});
-  else passed.push('landmark_navigation');
 
   const clickableRegex = /<(div|span|li)\b[^>]*(on(?:click|keydown|keyup|keypress|mousedown|mouseup|touchstart|touchend|getfocus|focus|blur)|tabindex\s*=\s*["']0["'])[^>]*>/gi;
   const interactiveWithoutRole = [];
@@ -124,11 +143,14 @@ function analyzeAccessibility(html) {
     } else {
       const roleValue = roleMatch[1].trim().split(/\s+/)[0].toLowerCase();
       if (!KNOWN_ROLES.has(roleValue)) {
-      interactiveIssues.push({snippet, role: roleValue, reason: 'invalid-role'});
-    } else if (!/aria-(label|labelledby|describedby)\s*=\s*["'][^"']+["']/i.test(snippet) && !/title\s*=\s*["'][^"']+["']/i.test(snippet)) {
-      interactiveIssues.push({snippet, role: roleValue, reason: 'missing-label'});
+        interactiveIssues.push({snippet, role: roleValue, reason: 'invalid-role'});
+      } else if (
+        !/aria-(label|labelledby|describedby)\s*=\s*["'][^"']+["']/i.test(snippet) &&
+        !/title\s*=\s*["'][^"']+["']/i.test(snippet)
+      ) {
+        interactiveIssues.push({snippet, role: roleValue, reason: 'missing-label'});
+      }
     }
-  }
   }
   if (interactiveWithoutRole.length)
     warnings.push({
@@ -189,6 +211,83 @@ function analyzeAccessibility(html) {
       recommendation: 'Кнопки должны содержать текст или aria-label',
     });
 
+  if (isEmail) {
+    const imgTags = text.match(/<img\b[^>]*>/gi) || [];
+
+    const missingAlt = imgTags.filter((tag) => {
+      const m = tag.match(/\balt\s*=\s*["']([^"']*)["']/i);
+      return !m || !m[1].trim();
+    });
+    if (missingAlt.length)
+      warnings.push({
+        type: 'email_missing_alt',
+        count: missingAlt.length,
+        recommendation: 'Добавьте alt-текст ко всем изображениям в письме',
+      });
+    else if (imgTags.length) {
+      passed.push('email_alt_present');
+    }
+
+    const hasInlineCss = /style\s*=\s*["'][^"']+["']/i.test(text);
+    if (!hasInlineCss)
+      warnings.push({
+        type: 'email_inline_css_missing',
+        recommendation: 'Инлайн-стили повышают совместимость с почтовыми клиентами',
+      });
+    else passed.push('email_inline_css_present');
+
+    const heavyInlineImages = [];
+    imgTags.forEach((tag) => {
+      const srcMatch = tag.match(/\bsrc=["']([^"']+)["']/i);
+      const bytes = parseDataUriBytes(srcMatch && srcMatch[1]);
+      if (bytes !== null && bytes > MAX_INLINE_IMAGE_BYTES) {
+        heavyInlineImages.push({bytes, src: srcMatch[1]});
+      }
+    });
+    if (heavyInlineImages.length)
+      warnings.push({
+        type: 'email_image_weight',
+        count: heavyInlineImages.length,
+        maxBytes: heavyInlineImages.reduce((max, img) => Math.max(max, img.bytes), 0),
+        recommendation: 'Сжимайте инлайн-изображения до <500KB или выносите их в CDN',
+      });
+
+    const retina = retinaStats(imgTags);
+    if (retina.unoptimized > 0)
+      warnings.push({
+        type: 'email_retina_missing',
+        total: retina.total,
+        unoptimized: retina.unoptimized,
+        recommendation: 'Добавьте srcset c 2x или используйте SVG для ретина-экранов',
+      });
+    else if (retina.total) {
+      passed.push('email_retina_ready');
+    }
+
+    if (Object.prototype.hasOwnProperty.call(options, 'preheader')) {
+      const preheader = String(options.preheader || '').trim();
+      if (!preheader)
+        warnings.push({
+          type: 'email_preheader_missing',
+          recommendation: 'Добавьте прехедер (короткий текст в начале письма)',
+        });
+      else passed.push('email_preheader_present');
+    }
+
+    const links = extractLinks(text).filter((l) => l.tag === 'a' && l.attr === 'href');
+    if (links.length) {
+      const withUtm = links.filter((l) => /[?&]utm_/i.test(l.url)).length;
+      const missingUtm = links.length - withUtm;
+      if (missingUtm > 0)
+        warnings.push({
+          type: 'email_missing_utm',
+          missing: missingUtm,
+          recommendation: 'Добавьте utm-метки к ссылкам, чтобы отслеживать трафик',
+        });
+      else passed.push('email_utm_present');
+    }
+  }
+
   const ariaRolesMissingLabel = interactiveIssues.filter((x) => x.reason === 'missing-label');
   if (ariaRolesMissingLabel.length)
     warnings.push({
@@ -205,13 +304,21 @@ function analyzeAccessibility(html) {
     passed,
     summary,
     metrics: {
-      hasMain,
-      hasHeader,
-      hasFooter,
-      navCount,
       interactiveWithoutRole: interactiveWithoutRole.length,
       anchorsWithoutLabel: anchorsWithoutName.length,
       buttonsWithoutLabel: buttonsWithoutName.length,
+      format,
+      emailMissingAlt: isEmail ? (warnings.find((w) => w.type === 'email_missing_alt')?.count || 0) : 0,
+      emailInlineCss: isEmail ? /style\s*=\s*["'][^"']+["']/i.test(text) : null,
+      emailInlineImagesOverLimit: isEmail
+        ? warnings.find((w) => w.type === 'email_image_weight')?.count || 0
+        : 0,
+      emailRetinaUnoptimized: isEmail
+        ? warnings.find((w) => w.type === 'email_retina_missing')?.unoptimized || 0
+        : 0,
+      emailMissingUtm: isEmail
+        ? warnings.find((w) => w.type === 'email_missing_utm')?.missing || 0
+        : 0,
     },
   };
 }

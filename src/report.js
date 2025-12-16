@@ -180,6 +180,166 @@ function heuristicSpamScore({text, html}) {
   return {score, level, trig, ratioImages: ratio.ratioImages, links};
 }
 
+const ACTION_MAP = {
+  missing_unsubscribe: 'Добавьте рабочую ссылку на отписку в конце письма.',
+  missing_alt_text: 'Пропишите alt-тексты для всех изображений.',
+  missing_subject: 'Заполните тему письма (30–50 символов).',
+  missing_preheader: 'Добавьте прехедер длиной 30–50 символов.',
+  encoding_not_utf8: 'Укажите <meta charset="UTF-8"> для корректной кодировки.',
+  subject_length: 'Приведите тему к диапазону 30–50 символов.',
+  preheader_length: 'Сделайте прехедер длиной 30–50 символов.',
+  subject_equals_preheader: 'Сформулируйте прехедер иначе, чем тема.',
+  body_length: 'Доведите общий объём текста до 500–2500 символов.',
+  image_to_text_ratio: 'Увеличьте долю текста: цель — минимум 60% текста.',
+  spam_image_ratio: 'Сократите количество картинок или добавьте текстовый блок.',
+  dns_missing_domain: 'Укажите домен отправителя, чтобы проверить SPF/DKIM/DMARC.',
+  dns_lookup_failed: 'Проверьте DNS-записи домена и доступность резолва.',
+  spf_missing: 'Создайте SPF TXT запись вида v=spf1 ... -all.',
+  spf_invalid: 'Исправьте SPF: завершите -all/~all и проверьте синтаксис.',
+  dmarc_missing: 'Добавьте _dmarc TXT с политикой p=none/quarantine/reject.',
+  dmarc_invalid: 'Исправьте DMARC: укажите v=DMARC1; p=... и нужные теги.',
+  dkim_missing: 'Опубликуйте DKIM TXT с публичным ключом для селектора.',
+  dkim_invalid: 'Проверьте DKIM запись: v=DKIM1; и параметр p=PUBLIC_KEY.',
+  missing_landmark_main: 'Отметьте основной контент тегом <main> или role="main".',
+  missing_landmark_header: 'Добавьте <header> или role="banner" для шапки.',
+  missing_landmark_footer: 'Добавьте <footer> или role="contentinfo".',
+  missing_landmark_navigation: 'Пометьте навигацию через <nav> или role="navigation".',
+  interactive_missing_role: 'Для кликабельных div/span задайте role и aria-label.',
+  invalid_role: 'Используйте допустимые значения атрибута role.',
+  links_without_label: 'Добавьте текст или aria-label для всех ссылок.',
+  buttons_without_label: 'Добавьте текст или aria-label для всех кнопок.',
+  role_without_label: 'Задайте aria-label/labelledby для элементов с role.',
+  accessibility_failed: 'Повторите проверку доступности или исправьте HTML.',
+  rtl_missing_direction: 'Добавьте dir="rtl" или CSS direction: rtl для RTL секций.',
+  rtl_missing_lang: 'Укажите lang="ar"/"he" на корневом или секционном теге.',
+  rtl_direction_without_content: 'Удалите direction:rtl или добавьте RTL контент в эту область.',
+  rtl_conflicting_direction: 'Согласуйте dir атрибуты с фактическим RTL контентом.',
+  rtl_failed: 'Проверьте разметку RTL вручную и запустите проверку снова.',
+  jinja_unclosed_expression: 'Закройте выражение Jinja: добавьте }}.',
+  jinja_empty_expression: 'Удалите пустые {{ }} или заполните выражение.',
+  jinja_suspicious_expression: 'Проверьте синтаксис выражения Jinja и фильтров.',
+  jinja_unclosed_statement: 'Закройте конструкцию Jinja парой %}.',
+  jinja_unmatched_end: 'Удалите лишний end-блок или добавьте соответствующий opener.',
+  jinja_mismatched_end: 'Исправьте закрывающий тег Jinja: end... должен совпадать.',
+  jinja_orphan_else: 'Переместите else/elif внутрь соответствующего блока.',
+  jinja_unclosed_block: 'Закройте все открытые блоки Jinja (endblock/endfor/endif).',
+  jinja_failed: 'Проверьте шаблон Jinja вручную и повторите проверку.',
+  missing_utm: 'Добавьте UTM-метки к ссылкам для отслеживания переходов.',
+  meta_viewport_missing:
+    'Добавьте <meta name="viewport" content="width=device-width,initial-scale=1">.',
+  html_size: 'Сократите размер HTML до <100KB (минификация/удаление лишнего).',
+  gif_present: 'Сожмите GIF-файлы до <1MB или замените статикой/видео.',
+  inline_css_missing:
+    'Перенесите критичные стили inline или в <style> для email-клиентов.',
+  retina_optimization: 'Добавьте srcset с 2x/SVG для ретина-экранов.',
+  spam_trigger_words: 'Уберите спам-триггеры вроде "free", "guarantee", капслок.',
+  spam_score: 'Снизьте спам-риск: уберите триггеры, уменьшите капслок и балансируйте текст.',
+  custom_fonts: 'Проверьте загрузку веб-шрифтов или замените на системные для стабильности.',
+  email_missing_alt: 'Добавьте alt-тексты в <img> в письме.',
+  email_image_weight: 'Сожмите инлайн-изображения до <500KB или вынесите на CDN.',
+  email_retina_missing: 'Добавьте srcset 2x или SVG для писем с изображениями.',
+  email_inline_css_missing: 'Используйте инлайн-стили для совместимости почтовиков.',
+  email_missing_utm: 'Добавьте UTM-метки к email-ссылкам.',
+  email_preheader_missing: 'Добавьте прехедер в письмо (видимый текст в начале).',
+};
+
+function deliverabilityStatus(errors, warnings) {
+  const criticalTypes = new Set([
+    'missing_unsubscribe',
+    'missing_subject',
+    'missing_preheader',
+    'encoding_not_utf8',
+    'dns_missing_domain',
+    'dns_lookup_failed',
+    'spf_missing',
+    'spf_invalid',
+    'dmarc_missing',
+    'dmarc_invalid',
+    'dkim_missing',
+    'dkim_invalid',
+  ]);
+  const warningTypes = new Set([
+    'missing_utm',
+    'spam_trigger_words',
+    'spam_score',
+    'spam_image_ratio',
+    'image_to_text_ratio',
+    'html_size',
+    'gif_present',
+    'inline_css_missing',
+    'retina_optimization',
+    'email_inline_css_missing',
+    'email_image_weight',
+    'email_missing_utm',
+  ]);
+  const spam = warnings.find((w) => w.type === 'spam_score');
+  const critical =
+    errors.some((e) => criticalTypes.has(e.type)) ||
+    warnings.some((w) => criticalTypes.has(w.type)) ||
+    (spam && spam.level === 'high');
+  if (critical) return 'Critical';
+  const warn =
+    warnings.some((w) => warningTypes.has(w.type)) ||
+    (spam && spam.level === 'medium');
+  return warn ? 'Warning' : 'OK';
+}
+
+function contentStatus({content, errors, warnings}) {
+  const contentTypes = new Set([
+    'missing_subject',
+    'missing_preheader',
+    'subject_length',
+    'preheader_length',
+    'subject_equals_preheader',
+    'body_length',
+  ]);
+  const hasContentIssue =
+    errors.some((e) => contentTypes.has(e.type)) ||
+    warnings.some((w) => contentTypes.has(w.type));
+  const contentSummary = Array.isArray(content?.summary) ? content.summary : [];
+  if (content?.error) return 'Needs fixes';
+  if (contentSummary.length) return 'Needs fixes';
+  if (hasContentIssue) return 'Needs fixes';
+  return 'OK';
+}
+
+function imageIssueCount({errors, warnings}) {
+  const imageTypes = new Set([
+    'missing_alt_text',
+    'image_to_text_ratio',
+    'spam_image_ratio',
+    'retina_optimization',
+    'gif_present',
+    'email_missing_alt',
+    'email_image_weight',
+    'email_retina_missing',
+  ]);
+  let count = 0;
+  [...errors, ...warnings].forEach((issue) => {
+    if (imageTypes.has(issue.type)) count += 1;
+  });
+  return count;
+}
+
+function buildActionItems(errors, warnings, content) {
+  const combined = [...errors, ...warnings];
+  const items = [];
+  combined.forEach((issue) => {
+    const action = ACTION_MAP[issue.type] || issue.recommendation;
+    if (action && !items.includes(action)) items.push(action);
+  });
+  if (content?.error) {
+    const msg = 'Контентные проверки не выполнены: ' + content.error;
+    if (!items.includes(msg)) items.push(msg);
+  }
+  const contentSummary = Array.isArray(content?.summary) ? content.summary : [];
+  contentSummary.forEach((line) => {
+    const action = 'Контент: ' + line;
+    if (action && !items.includes(action)) items.push(action);
+  });
+  return items.slice(0, 12);
+}
+
 function buildReport({
   campaign,
   html,
@@ -192,6 +352,7 @@ function buildReport({
   accessibility,
   rtl,
   jinja,
+  content,
 }) {
   const text = (html || '')
     .replace(/<[^>]+>/g, ' ')
@@ -430,15 +591,30 @@ function buildReport({
   }
 
   const total_checks = errors.length + warnings.length + passed.length;
+  const penaltyErrors = errors.length * 25;
+  const penaltyWarnings = warnings.length * 3;
+  const bonusPassed = Math.min(20, passed.length * 2);
   const readiness_score = Math.max(
     0,
-    Math.min(
-      100,
-      Math.round(
-        100 - errors.length * 20 - warnings.length * 5 + passed.length * 2,
-      ),
-    ),
+    Math.min(100, Math.round(100 - penaltyErrors - penaltyWarnings + bonusPassed)),
   );
+
+  const structured_summary = {
+    deliverability: {
+      status: deliverabilityStatus(errors, warnings),
+    },
+    content: {
+      status: contentStatus({content, errors, warnings}),
+    },
+    images: {
+      issues: imageIssueCount({errors, warnings, accessibility}),
+    },
+    jinja: {
+      issues: Array.isArray(jinja?.warnings) ? jinja.warnings.length : 0,
+    },
+  };
+
+  const action_items = buildActionItems(errors, warnings, content);
 
   return {
     campaign: campaign || '',
@@ -453,6 +629,8 @@ function buildReport({
     warnings,
     passed,
     readiness_score,
+    structured_summary,
+    action_items,
   };
 }
 

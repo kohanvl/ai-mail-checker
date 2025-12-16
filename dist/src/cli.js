@@ -283,16 +283,7 @@ async function runCli(argv) {
           console.log('  No major accessibility issues detected.');
         }
         const metrics = acc.metrics || {};
-        console.log(
-          '  Landmarks: main=' +
-            (metrics.hasMain ? 'yes' : 'no') +
-            ', header=' +
-            (metrics.hasHeader ? 'yes' : 'no') +
-            ', footer=' +
-            (metrics.hasFooter ? 'yes' : 'no') +
-            ', nav=' +
-            (metrics.navCount || 0),
-        );
+        console.log('  Landmark checks (header/footer/main/nav) are skipped.');
         console.log(
           '  Interactive without role=' +
             (metrics.interactiveWithoutRole || 0) +
@@ -396,18 +387,39 @@ async function runCli(argv) {
         '  meta viewport: ' +
           (resp.metaViewportPresent ? 'present' : 'missing'),
       );
-      resp.viewports.forEach((v) => {
+      const viewports = Array.isArray(resp.viewports) ? resp.viewports : [];
+      const problematic = Array.isArray(resp.problematic)
+        ? resp.problematic
+        : viewports.filter((v) => v.problematic);
+      if (!problematic.length) {
         console.log(
-          '  width ' +
-            v.width +
-            ': overflowX=' +
-            v.overflowX +
-            ', tooWide=' +
-            v.tooWide.length +
-            ', smallText=' +
-            v.smallText.length,
+          '  No problematic devices detected. Baseline: ' +
+            ((resp.baseline && resp.baseline.width) || 'n/a') +
+            'px',
         );
-      });
+      } else {
+        console.log(
+          '  Problematic devices: ' + problematic.length + '/' + viewports.length,
+        );
+        problematic.forEach((v) => {
+          const reasons = Array.isArray(v.reasons)
+            ? v.reasons
+                .map((r) => r.type + (r.severity ? ' (' + r.severity + ')' : ''))
+                .join(', ')
+            : '';
+          console.log(
+            '    width ' +
+              v.width +
+              ': overflow=' +
+              (v.overflowPercent || 0) +
+              '%, tooWide=' +
+              (Array.isArray(v.tooWide) ? v.tooWide.length : 0) +
+              ', smallText=' +
+              (Array.isArray(v.smallText) ? v.smallText.length : 0) +
+              (reasons ? ' | ' + reasons : ''),
+          );
+        });
+      }
     }
   }
 
@@ -453,11 +465,16 @@ async function runCli(argv) {
       console.log('  ' + out.error);
     } else {
       const r = out.result || {};
-      console.log('  Summary: ' + (r.summary || ''));
-      if (Array.isArray(r.issues) && r.issues.length)
-        console.log('  Issues: ' + r.issues.join('; '));
-      if (Array.isArray(r.suggestions) && r.suggestions.length)
-        console.log('  Suggestions: ' + r.suggestions.join('; '));
+      const summaryLine = String(r.summary || '').split('\n')[0];
+      if (summaryLine) console.log('  Summary: ' + summaryLine);
+      if (r.report) {
+        console.log('\n' + r.report + '\n');
+      } else {
+        if (Array.isArray(r.issues) && r.issues.length)
+          console.log('  Issues: ' + r.issues.join('; '));
+        if (Array.isArray(r.suggestions) && r.suggestions.length)
+          console.log('  Suggestions: ' + r.suggestions.join('; '));
+      }
     }
   }
 

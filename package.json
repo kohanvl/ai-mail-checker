@@ -10,14 +10,16 @@
     "start": "node index.js --serve --port 3000",
     "serve": "node index.js --serve --port 3000",
     "cli": "node index.js",
-    "install-puppeteer": "npm i puppeteer",
     "build": "node scripts/build.js"
   },
-  "optionalDependencies": {
-    "puppeteer": "^22.15.0"
-  },
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "puppeteer-core": "^22.15.0",
+    "@sparticuz/chromium": "^122.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "html-minifier-terser": "^7.2.0"
   },
   "keywords": [
     "email",

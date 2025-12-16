@@ -7,64 +7,82 @@
     <link rel="icon" href="/favicon.ico" />
     <style>
       :root {
-        --bg: #f7f9fc;
+        --baby: #e1f3fe;
+        --navy-light: #4221b8;
+        --navy-dark: #210a74;
+        --lavender-light: #c6d2ff;
+        --lavender-super: #f7f4fe;
+        --lavender: #9694ff;
+        --tender: #6d46fc;
+        --yellow: #fbe74e;
+        --red: #ff5a56;
+        --green: #31c838;
+        --grass: #19aa20;
+        --bg: var(--lavender-super);
         --panel: #ffffff;
-        --stroke: #e5e7eb;
-        --muted: #6b7280;
-        --fg: #0f172a;
-        --subtle: #475569;
-        --accent: #4f46e5;
-        --ok: #16a34a;
-        --bad: #ef4444;
-        --warn: #f59e0b;
+        --stroke: rgba(66, 33, 184, 0.16);
+        --muted: #4c4a6c;
+        --fg: #140b33;
+        --subtle: #5a5382;
+        --accent: var(--tender);
+        --accent-strong: var(--navy-dark);
+        --accent-soft: var(--lavender-light);
+        --shadow: 0 18px 50px rgba(33, 10, 116, 0.08);
       }
       * {
         box-sizing: border-box;
       }
       body {
         margin: 0;
-        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-        background: var(--bg);
+        font-family: 'Mikado', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        background:
+          radial-gradient(circle at 18% 18%, rgba(193, 208, 255, 0.5), transparent 38%),
+          radial-gradient(circle at 82% 8%, rgba(225, 243, 254, 0.7), transparent 32%),
+          linear-gradient(145deg, #f7f4fe 0%, #e1f3fe 48%, #c6d2ff 100%);
         color: var(--fg);
       }
       .container {
-        max-width: 1100px;
+        max-width: 1180px;
         margin: 0 auto;
         padding: 16px;
       }
       header {
-        padding: 24px 8px 8px;
+        padding: 32px 8px 14px;
         text-align: center;
       }
       header h1 {
         margin: 0;
-        font-size: 26px;
-        font-weight: 700;
-        letter-spacing: 0.2px;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: 0.6px;
+        color: var(--navy-dark);
+        text-shadow: 0 4px 18px rgba(33, 10, 116, 0.18);
       }
       header p {
-        margin: 6px 0 0;
+        margin: 8px auto 0;
+        max-width: 640px;
         color: var(--muted);
-        font-size: 13px;
+        font-size: 14px;
       }
       .card {
-        background: var(--panel);
-        border: 1px solid var(--stroke);
-        border-radius: 14px;
-        padding: 16px;
-        box-shadow: 0 6px 16px rgba(2, 6, 23, 0.06);
+        background: linear-gradient(#ffffff, #ffffff) padding-box,
+          linear-gradient(135deg, rgba(193, 208, 255, 0.8), rgba(225, 243, 254, 0.9)) border-box;
+        border: 1px solid transparent;
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: var(--shadow);
       }
       .section-title {
-        margin: 0 0 12px;
+        margin: 0 0 14px;
         font-size: 12px;
         color: var(--subtle);
+        letter-spacing: 0.1em;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
       }
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 12px;
+        gap: 14px;
       }
       label {
         display: block;
@@ -76,21 +94,22 @@
       input[type='number'],
       textarea {
         width: 100%;
-        background: #ffffff;
+        background: rgba(225, 243, 254, 0.35);
         border: 1px solid var(--stroke);
         color: var(--fg);
-        border-radius: 10px;
-        padding: 10px 12px;
+        border-radius: 12px;
+        padding: 11px 14px;
         font-size: 13px;
         outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
       }
       input:focus,
       textarea:focus {
-        border-color: #c7d2fe;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(109, 70, 252, 0.2);
       }
       textarea {
-        min-height: 180px;
+        min-height: 190px;
         resize: vertical;
       }
       .controls {
@@ -98,16 +117,16 @@
         flex-wrap: wrap;
         gap: 10px;
         align-items: center;
-        margin-top: 10px;
+        margin-top: 12px;
       }
       .chip {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        border: 1px solid var(--stroke);
-        background: #f8fafc;
-        color: #334155;
-        padding: 8px 10px;
+        border: 1px solid rgba(66, 33, 184, 0.18);
+        background: rgba(225, 243, 254, 0.8);
+        color: var(--navy-dark);
+        padding: 9px 12px;
         border-radius: 999px;
         font-size: 12px;
       }
@@ -117,44 +136,53 @@
         gap: 8px;
       }
       .btn {
-        background: linear-gradient(135deg, var(--accent), #7c3aed);
+        background: linear-gradient(120deg, var(--navy-dark), var(--accent));
         border: none;
         color: #fff;
-        padding: 10px 14px;
-        border-radius: 10px;
-        font-weight: 600;
+        padding: 11px 16px;
+        border-radius: 12px;
+        font-weight: 700;
         cursor: pointer;
+        letter-spacing: 0.2px;
+        box-shadow: 0 10px 28px rgba(33, 10, 116, 0.18);
+        transition: transform 0.08s ease, box-shadow 0.12s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 32px rgba(33, 10, 116, 0.22);
       }
       .btn.secondary {
-        background: #f3f4f6;
-        color: #0f172a;
-        border: 1px solid var(--stroke);
+        background: linear-gradient(120deg, #ffffff, #f7f4fe);
+        color: var(--navy-dark);
+        border: 1px solid rgba(66, 33, 184, 0.2);
+        box-shadow: none;
       }
       .results {
         display: grid;
-        gap: 16px;
+        gap: 18px;
       }
       .status {
         font-size: 12px;
-        font-weight: 600;
-        padding: 4px 8px;
+        font-weight: 700;
+        padding: 5px 9px;
         border-radius: 999px;
         display: inline-block;
+        border: 1px solid transparent;
       }
       .status.ok {
-        color: #065f46;
-        background: rgba(16, 185, 129, 0.14);
-        border: 1px solid rgba(16, 185, 129, 0.35);
+        color: var(--grass);
+        background: rgba(49, 200, 56, 0.15);
+        border-color: rgba(49, 200, 56, 0.35);
       }
       .status.bad {
-        color: #7f1d1d;
-        background: rgba(239, 68, 68, 0.14);
-        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #8f1d1d;
+        background: rgba(255, 90, 86, 0.18);
+        border-color: rgba(255, 90, 86, 0.45);
       }
       .status.skip {
-        color: #78350f;
-        background: rgba(245, 158, 11, 0.16);
-        border: 1px solid rgba(245, 158, 11, 0.35);
+        color: #846000;
+        background: rgba(251, 231, 78, 0.2);
+        border-color: rgba(251, 231, 78, 0.4);
       }
       table {
         width: 100%;
@@ -162,27 +190,28 @@
         border-spacing: 0 8px;
       }
       thead th {
-        color: #334155;
+        color: var(--navy-dark);
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
         text-align: left;
-        padding: 8px 10px;
+        padding: 9px 12px;
       }
       tbody tr {
-        background: #ffffff;
-        border: 1px solid var(--stroke);
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(66, 33, 184, 0.16);
       }
       tbody td {
         font-size: 12px;
-        padding: 10px 12px;
+        padding: 11px 12px;
+        color: var(--fg);
       }
       tbody td:first-child {
-        border-top-left-radius: 8px;
-        border-bottom-left-radius: 8px;
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
       }
       tbody td:last-child {
-        border-top-right-radius: 8px;
-        border-bottom-right-radius: 8px;
+        border-top-right-radius: 10px;
+        border-bottom-right-radius: 10px;
       }
       .hero {
         display: grid;
@@ -194,10 +223,14 @@
         width: 180px;
         height: 180px;
         border-radius: 50%;
-        background: conic-gradient(#22c55e var(--p, 0%), #e5e7eb 0);
+        background: conic-gradient(
+          var(--green) var(--p, 0%),
+          rgba(198, 210, 255, 0.9) 0
+        );
         display: grid;
         place-items: center;
         position: relative;
+        box-shadow: inset 0 0 0 8px rgba(109, 70, 252, 0.08);
       }
       .gauge::after {
         content: '';
@@ -210,65 +243,223 @@
       .gauge-value {
         position: relative;
         font-weight: 800;
-        font-size: 32px;
-        color: #111827;
+        font-size: 34px;
+        color: var(--navy-dark);
       }
       .badge {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        border: 1px solid var(--stroke);
-        padding: 6px 10px;
+        border: 1px solid rgba(66, 33, 184, 0.2);
+        padding: 7px 11px;
         border-radius: 999px;
         font-size: 12px;
-        background: #eef2ff;
-        color: #111827;
+        background: rgba(225, 243, 254, 0.75);
+        color: var(--navy-dark);
+      }
+      .badge .icon svg {
+        stroke: var(--accent);
       }
       .tabs {
         display: flex;
         gap: 8px;
-        border-bottom: 1px solid var(--stroke);
-        margin-top: 16px;
+        border-bottom: 1px solid rgba(66, 33, 184, 0.14);
+        margin-top: 20px;
       }
       .tab {
-        padding: 8px 12px;
-        border: 1px solid var(--stroke);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 12px;
+        border: 1px solid rgba(66, 33, 184, 0.18);
         border-bottom: none;
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
-        background: #f8fafc;
-        color: #334155;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        background: rgba(225, 243, 254, 0.7);
+        color: var(--navy-dark);
         cursor: pointer;
         font-size: 12px;
+        font-weight: 700;
+        transition: background 0.12s ease, transform 0.08s ease;
+      }
+      .tab:hover {
+        transform: translateY(-1px);
+        background: rgba(198, 210, 255, 0.8);
       }
       .tab.active {
         background: #ffffff;
-        color: #111827;
-        font-weight: 600;
+        color: var(--navy-dark);
+        font-weight: 800;
+        box-shadow: 0 -6px 18px rgba(33, 10, 116, 0.08);
+      }
+      .tab.active .icon svg {
+        stroke: var(--accent-strong);
       }
       details {
-        background: #ffffff;
-        border: 1px solid var(--stroke);
-        border-radius: 10px;
+        background: rgba(225, 243, 254, 0.55);
+        border: 1px solid rgba(66, 33, 184, 0.2);
+        border-radius: 12px;
         padding: 10px 12px;
       }
       summary {
         cursor: pointer;
         font-size: 12px;
-        color: #111827;
+        color: var(--navy-dark);
+        font-weight: 700;
       }
       footer {
-        color: #6b7280;
+        color: var(--muted);
         text-align: center;
         font-size: 12px;
-        margin: 20px 0;
+        margin: 22px 0 18px;
       }
       .icon {
-        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+      }
+      .icon svg {
+        width: 100%;
+        height: 100%;
+        stroke: var(--navy-dark);
+        fill: none;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+      }
+      .preview-card {
+        background: rgba(225, 243, 254, 0.4);
+        border: 1px solid rgba(66, 33, 184, 0.16);
+        border-radius: 14px;
+        padding: 11px;
+      }
+      .preview-card header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .badge.soft {
+        background: rgba(198, 210, 255, 0.7);
+        color: var(--navy-dark);
+        border-color: rgba(109, 70, 252, 0.2);
+      }
+      .badge.minor {
+        background: rgba(225, 243, 254, 0.7);
+        color: var(--navy-dark);
+        border-color: rgba(148, 163, 184, 0.3);
       }
     </style>
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+      (function (m, e, t, r, i, k, a) {
+        m[i] =
+          m[i] ||
+          function () {
+            (m[i].a = m[i].a || []).push(arguments);
+          };
+        m[i].l = 1 * new Date();
+        for (var j = 0; j < document.scripts.length; j++) {
+          if (document.scripts[j].src === r) {
+            return;
+          }
+        }
+        (k = e.createElement(t)),
+          (a = e.getElementsByTagName(t)[0]),
+          (k.async = 1),
+          (k.src = r),
+          a.parentNode.insertBefore(k, a);
+      })(
+        window,
+        document,
+        'script',
+        'https://mc.yandex.ru/metrika/tag.js?id=104548225',
+        'ym',
+      );
+
+      ym(104548225, 'init', {
+        ssr: true,
+        webvisor: true,
+        clickmap: true,
+        ecommerce: 'dataLayer',
+        accurateTrackBounce: true,
+        trackLinks: true,
+      });
+    </script>
+    <noscript
+      ><div>
+        <img
+          src="https://mc.yandex.ru/watch/104548225"
+          style="position: absolute; left: -9999px"
+          alt=""
+        /></div
+    ></noscript>
+    <!-- /Yandex.Metrika counter -->
   </head>
   <body>
+    <svg aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden">
+      <defs>
+        <symbol id="icon-overall" viewBox="0 0 24 24">
+          <path d="M12 4v2.5M12 17.5V20M6.1 6.1l1.8 1.8M16.1 16.1l1.8 1.8M4 12h2.5M17.5 12H20" />
+          <circle cx="12" cy="12" r="4.5" />
+          <path d="M12 7.5c.9 0 1.5.6 1.5 1.5 0 .9-.6 1.5-1.5 1.5-.9 0-1.5.6-1.5 1.5S11.1 14.5 12 14.5" />
+        </symbol>
+        <symbol id="icon-links" viewBox="0 0 24 24">
+          <path d="M14.5 10c1.6-1.6 1.6-4.1 0-5.7s-4.1-1.6-5.7 0L6.6 6.5c-1.6 1.6-1.6 4.1 0 5.7" />
+          <path d="M9.5 14c-1.6 1.6-1.6 4.1 0 5.7s4.1 1.6 5.7 0l2.2-2.2c1.6-1.6 1.6-4.1 0-5.7" />
+          <path d="M9.8 14.2 14.2 9.8" />
+        </symbol>
+        <symbol id="icon-resp" viewBox="0 0 24 24">
+          <rect x="4" y="6" width="12.5" height="12" rx="2.5" />
+          <path d="M16.5 9.5H18c1.1 0 2 .9 2 2v5.5c0 1.1-.9 2-2 2h-6.5" />
+          <path d="M11 18.5h2.5" />
+          <path d="M6.5 9.5h7.5" />
+        </symbol>
+        <symbol id="icon-ai" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3.5" />
+          <path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20" />
+          <path d="M6.3 6.3 8 8M16 16l1.7 1.7M6.3 17.7 8 16M16 8l1.7-1.7" />
+        </symbol>
+        <symbol id="icon-a11y" viewBox="0 0 24 24">
+          <circle cx="12" cy="6.5" r="1.8" />
+          <path d="M7 10.5h10" />
+          <path d="M9.5 10.5 11 19M14.5 10.5 13 19" />
+          <path d="M7.8 14.5 9.7 13M16.2 14.5 14.3 13" />
+        </symbol>
+        <symbol id="icon-rtl" viewBox="0 0 24 24">
+          <path d="M7.5 7.5v9" />
+          <path d="M7.5 7.5 5 10m2.5-2.5L10 10" />
+          <rect x="11" y="6" width="7.5" height="3.5" rx="1" />
+          <rect x="11" y="14.5" width="7.5" height="3.5" rx="1" />
+        </symbol>
+        <symbol id="icon-jinja" viewBox="0 0 24 24">
+          <path d="M9.5 5.5c-2 1.4-3 3-3 6s1 4.6 3 6" />
+          <path d="M14.5 5.5c2 1.4 3 3 3 6s-1 4.6-3 6" />
+          <path d="M11 9h2M11 15h2" />
+        </symbol>
+        <symbol id="icon-dns" viewBox="0 0 24 24">
+          <path d="M12 4 6 6.5v5.3c0 3.8 2.4 7.3 6 8.7 3.6-1.4 6-4.9 6-8.7V6.5L12 4Z" />
+          <path d="m10 12 1.6 1.7L14.5 11" />
+        </symbol>
+        <symbol id="icon-report" viewBox="0 0 24 24">
+          <path d="M9.5 5H15c1.1 0 2 .9 2 2v11.5c0 .8-.7 1.5-1.5 1.5H8.5A1.5 1.5 0 0 1 7 18.5V7c0-1.1.9-2 2-2Z" />
+          <path d="M9 8.5h6" />
+          <path d="M9 12h4.5" />
+          <path d="M9 15.5h3" />
+        </symbol>
+        <symbol id="icon-preview" viewBox="0 0 24 24">
+          <path d="M3.5 12c1.6-3 4.6-5 8.5-5s6.9 2 8.5 5c-1.6 3-4.6 5-8.5 5s-6.9-2-8.5-5Z" />
+          <circle cx="12" cy="12" r="2.5" />
+        </symbol>
+      </defs>
+    </svg>
     <header>
       <div class="container">
         <h1>AI Email HTML Checker</h1>
@@ -303,11 +494,7 @@
           </div>
           <div>
             <label>DKIM selectors (comma separated)</label>
-            <input
-              type="text"
-              id="dkimSelectors"
-              placeholder="default"
-            />
+            <input type="text" id="dkimSelectors" placeholder="default" />
           </div>
         </div>
         <div style="margin-top: 10px">
@@ -358,11 +545,12 @@
           </div>
           <div>
             <div class="badge">
-              <span class="icon">📊</span
-              ><span id="badgeSummary">Overall readiness</span>
+              <span class="icon"
+                ><svg><use href="#icon-overall"></use></svg></span
+              ><span id="badgeSummary">Overall readiness — awaiting score</span>
             </div>
             <div
-              style="margin-top: 8px; color: #334155; font-size: 13px"
+              style="margin-top: 8px; color: var(--muted); font-size: 13px"
               id="heroSummary"
             >
               Run a check to see results.
@@ -372,21 +560,48 @@
       </div>
 
       <div class="tabs">
-        <div class="tab active" data-tab="linksTab">Links</div>
-        <div class="tab" data-tab="respTab">Responsiveness</div>
-        <div class="tab" data-tab="aiTab">AI Review</div>
-        <div class="tab" data-tab="a11yTab">Accessibility</div>
-        <div class="tab" data-tab="rtlTab">RTL</div>
-        <div class="tab" data-tab="jinjaTab">Jinja</div>
-        <div class="tab" data-tab="dnsTab">Deliverability</div>
-        <div class="tab" data-tab="reportTab">Report</div>
-        <div class="tab" data-tab="previewTab">Preview</div>
+        <div class="tab active" data-tab="linksTab">
+          <span class="icon"><svg><use href="#icon-links"></use></svg></span>
+          Links
+        </div>
+        <div class="tab" data-tab="respTab">
+          <span class="icon"><svg><use href="#icon-resp"></use></svg></span>
+          Responsiveness
+        </div>
+        <div class="tab" data-tab="aiTab">
+          <span class="icon"><svg><use href="#icon-ai"></use></svg></span>
+          AI Review
+        </div>
+        <div class="tab" data-tab="a11yTab">
+          <span class="icon"><svg><use href="#icon-a11y"></use></svg></span>
+          Accessibility
+        </div>
+        <div class="tab" data-tab="rtlTab">
+          <span class="icon"><svg><use href="#icon-rtl"></use></svg></span>
+          RTL
+        </div>
+        <div class="tab" data-tab="jinjaTab">
+          <span class="icon"><svg><use href="#icon-jinja"></use></svg></span>
+          Jinja
+        </div>
+        <div class="tab" data-tab="dnsTab">
+          <span class="icon"><svg><use href="#icon-dns"></use></svg></span>
+          Deliverability
+        </div>
+        <div class="tab" data-tab="reportTab">
+          <span class="icon"><svg><use href="#icon-report"></use></svg></span>
+          Report
+        </div>
+        <div class="tab" data-tab="previewTab">
+          <span class="icon"><svg><use href="#icon-preview"></use></svg></span>
+          Preview
+        </div>
       </div>
 
       <div class="results">
         <div class="card tab-panel" id="linksTab">
           <p class="section-title">Links</p>
-          <div id="summary" style="margin-bottom: 8px; color: #334155"></div>
+          <div id="summary" style="margin-bottom: 8px; color: var(--muted)"></div>
           <details open>
             <summary>Details</summary>
             <table>
@@ -408,11 +623,11 @@
           <p class="section-title">Responsiveness</p>
           <div
             id="respSummary"
-            style="margin-bottom: 8px; color: #334155"
+            style="margin-bottom: 8px; color: var(--muted)"
           ></div>
           <details>
             <summary>Viewport metrics</summary>
-            <div id="respDetails" style="font-size: 12px; color: #334155"></div>
+            <div id="respDetails" style="font-size: 12px; color: var(--muted)"></div>
           </details>
           <details style="margin-top: 8px">
             <summary>Screenshots</summary>
@@ -425,131 +640,173 @@
 
         <div class="card tab-panel" id="aiTab" hidden>
           <p class="section-title">AI review</p>
-          <div id="aiSummary" style="color: #334155; font-size: 12px"></div>
+          <div id="aiSummary" style="color: var(--muted); font-size: 12px"></div>
           <details style="margin-top: 8px">
             <summary>Details</summary>
             <div
               id="aiDetails"
-              style="color: #334155; font-size: 12px; margin-top: 8px"
+              style="color: var(--muted); font-size: 12px; margin-top: 8px"
             ></div>
           </details>
         </div>
 
         <div class="card tab-panel" id="a11yTab" hidden>
           <p class="section-title">Accessibility</p>
-          <div id="a11ySummary" style="margin-bottom: 8px; color: #334155"></div>
+          <div
+            id="a11ySummary"
+            style="margin-bottom: 8px; color: var(--muted)"
+          ></div>
           <details open>
             <summary>Warnings</summary>
-            <div id="a11yWarnings" style="font-size: 12px; color: #334155"></div>
+            <div
+              id="a11yWarnings"
+              style="font-size: 12px; color: var(--muted)"
+            ></div>
           </details>
           <details style="margin-top: 8px">
             <summary>Landmarks & metrics</summary>
-            <div id="a11yMetrics" style="font-size: 12px; color: #334155"></div>
+            <div id="a11yMetrics" style="font-size: 12px; color: var(--muted)"></div>
           </details>
         </div>
 
         <div class="card tab-panel" id="rtlTab" hidden>
           <p class="section-title">RTL layout</p>
-          <div id="rtlSummary" style="margin-bottom: 8px; color: #334155"></div>
+          <div id="rtlSummary" style="margin-bottom: 8px; color: var(--muted)"></div>
           <details open>
             <summary>Warnings</summary>
-            <div id="rtlWarnings" style="font-size: 12px; color: #334155"></div>
+            <div id="rtlWarnings" style="font-size: 12px; color: var(--muted)"></div>
           </details>
           <details style="margin-top: 8px">
             <summary>Metrics</summary>
-            <div id="rtlMetrics" style="font-size: 12px; color: #334155"></div>
+            <div id="rtlMetrics" style="font-size: 12px; color: var(--muted)"></div>
           </details>
         </div>
 
         <div class="card tab-panel" id="jinjaTab" hidden>
           <p class="section-title">Jinja template</p>
-          <div id="jinjaSummary" style="margin-bottom: 8px; color: #334155"></div>
+          <div
+            id="jinjaSummary"
+            style="margin-bottom: 8px; color: var(--muted)"
+          ></div>
           <details open>
             <summary>Warnings</summary>
-            <div id="jinjaWarnings" style="font-size: 12px; color: #334155"></div>
+            <div
+              id="jinjaWarnings"
+              style="font-size: 12px; color: var(--muted)"
+            ></div>
           </details>
           <details style="margin-top: 8px">
             <summary>Metrics</summary>
-            <div id="jinjaMetrics" style="font-size: 12px; color: #334155"></div>
+            <div
+              id="jinjaMetrics"
+              style="font-size: 12px; color: var(--muted)"
+            ></div>
           </details>
         </div>
 
         <div class="card tab-panel" id="dnsTab" hidden>
           <p class="section-title">Deliverability</p>
-          <div id="dnsSummary" style="margin-bottom: 8px; color: #334155"></div>
+          <div id="dnsSummary" style="margin-bottom: 8px; color: var(--muted)"></div>
           <details open>
             <summary>SPF</summary>
-            <div id="dnsSpf" style="font-size: 12px; color: #334155"></div>
+            <div id="dnsSpf" style="font-size: 12px; color: var(--muted)"></div>
           </details>
           <details style="margin-top: 8px">
             <summary>DMARC</summary>
-            <div id="dnsDmarc" style="font-size: 12px; color: #334155"></div>
+            <div id="dnsDmarc" style="font-size: 12px; color: var(--muted)"></div>
           </details>
           <details style="margin-top: 8px">
             <summary>DKIM selectors</summary>
-            <div id="dnsDkim" style="font-size: 12px; color: #334155"></div>
+            <div id="dnsDkim" style="font-size: 12px; color: var(--muted)"></div>
           </details>
         </div>
 
         <div class="card tab-panel" id="reportTab" hidden>
           <p class="section-title">Report</p>
-          <div style="font-size: 12px; color: #334155; margin-bottom: 8px">
+          <div style="font-size: 12px; color: var(--muted); margin-bottom: 8px">
             Summary of checks (errors, warnings, passed)
           </div>
           <details open style="margin-bottom: 8px">
             <summary>Human‑readable</summary>
             <div
               id="reportHuman"
-              style="font-size: 12px; color: #334155; margin-top: 8px"
+              style="font-size: 12px; color: var(--muted); margin-top: 8px"
             ></div>
           </details>
-          <pre
-            id="reportJson"
-            style="
-              white-space: pre-wrap;
-              background: #f8fafc;
-              border: 1px solid var(--stroke);
-              border-radius: 10px;
-              padding: 12px;
-              font-size: 12px;
-              color: #0f172a;
-            "
-          ></pre>
         </div>
 
         <div class="card tab-panel" id="previewTab" hidden>
           <p class="section-title">Preview</p>
-          <div
-            class="grid"
-            style="
-              grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-              gap: 16px;
-            "
-          >
-            <div>
-              <div style="font-size: 12px; color: #334155; margin-bottom: 6px">
-                Light theme
-              </div>
+          <div class="controls" style="padding: 0; margin-bottom: 10px">
+            <div style="font-size: 12px; color: #475569">
+              Gmail/Outlook ignore dark media queries — modes below emulate clients.
+            </div>
+          </div>
+          <div class="preview-grid">
+            <div class="preview-card">
+              <header>
+                <div style="font-size: 12px; color: var(--muted)">Normal (light)</div>
+                <span class="badge minor">Baseline</span>
+              </header>
               <iframe
-                id="previewLight"
+                id="previewNormal"
                 style="
                   width: 100%;
-                  height: 520px;
+                  height: 480px;
                   border: 1px solid var(--stroke);
                   border-radius: 10px;
                   background: #fff;
                 "
               ></iframe>
             </div>
-            <div>
-              <div style="font-size: 12px; color: #334155; margin-bottom: 6px">
-                Dark theme
-              </div>
+            <div class="preview-card">
+              <header>
+                <div style="font-size: 12px; color: var(--muted)">
+                  Apple Mail Dark
+                </div>
+                <span class="badge soft">Apple</span>
+              </header>
               <iframe
-                id="previewDark"
+                id="previewApple"
                 style="
                   width: 100%;
-                  height: 520px;
+                  height: 480px;
+                  border: 1px solid var(--stroke);
+                  border-radius: 10px;
+                  background: #000;
+                "
+              ></iframe>
+            </div>
+            <div class="preview-card">
+              <header>
+                <div style="font-size: 12px; color: var(--muted)">
+                  Gmail Dark
+                </div>
+                <span class="badge soft">Gmail</span>
+              </header>
+              <iframe
+                id="previewGmail"
+                style="
+                  width: 100%;
+                  height: 480px;
+                  border: 1px solid var(--stroke);
+                  border-radius: 10px;
+                  background: #121212;
+                "
+              ></iframe>
+            </div>
+            <div class="preview-card">
+              <header>
+                <div style="font-size: 12px; color: var(--muted)">
+                  Outlook Dark
+                </div>
+                <span class="badge soft">Outlook</span>
+              </header>
+              <iframe
+                id="previewOutlook"
+                style="
+                  width: 100%;
+                  height: 480px;
                   border: 1px solid var(--stroke);
                   border-radius: 10px;
                   background: #0b1220;
@@ -561,6 +818,6 @@
       </div>
     </main>
     <footer>AI Email HTML Checker</footer>
-    <script src="/app.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>
