@@ -74,6 +74,12 @@ async function main() {
   await fs.mkdir(dist, {recursive: true});
 
   await copyDir(path.join(root, 'src'), path.join(dist, 'src'));
+  // Serverless / API handlers (e.g., Vercel/Cloudflare)
+  try {
+    await copyDir(path.join(root, 'api'), path.join(dist, 'api'));
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
   await copyDir(path.join(root, 'public'), path.join(dist, 'public'), {
     transform: transformStaticAsset,
   });
