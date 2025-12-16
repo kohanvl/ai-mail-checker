@@ -330,7 +330,16 @@ runBtn.addEventListener('click', async () => {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload),
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) {
+      const err = new Error('HTTP ' + r.status);
+      err.status = r.status;
+      try {
+        err.body = await r.text();
+      } catch (_) {
+        // ignore body read errors
+      }
+      throw err;
+    }
     const data = await r.json();
 
     // Links
@@ -1075,10 +1084,21 @@ runBtn.addEventListener('click', async () => {
     activateTab('linksTab');
   } catch (e) {
     const msg = (e && e.message) || String(e) || 'Unknown error';
-    const hint =
-      typeof location !== 'undefined' && location.protocol === 'file:'
-        ? '\n\nHint: run `npm run serve` and open http://localhost:3000/ (or set window.API_BASE_URL).'
-        : '';
+    const status = e && e.status;
+    let hint = '';
+    if (
+      typeof location !== 'undefined' &&
+      (status === 404 || status === 405)
+    ) {
+      hint =
+        '\n\nAPI /api/check is not running for this build. Start the backend with `npm run serve` (dev) or `npm run preview` after a build, or set window.API_BASE_URL.';
+    } else if (
+      typeof location !== 'undefined' &&
+      location.protocol === 'file:'
+    ) {
+      hint =
+        '\n\nHint: run `npm run serve` and open http://localhost:3000/ (or set window.API_BASE_URL).';
+    }
     alert('Error: ' + msg + hint);
   } finally {
     runBtn.disabled = false;

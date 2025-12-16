@@ -10,7 +10,8 @@
     "start": "node index.js --serve --port 3000",
     "serve": "node index.js --serve --port 3000",
     "cli": "node index.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "preview": "npm run build && node dist/index.js --serve --port 3000"
   },
   "dependencies": {
     "node-fetch": "^3.3.2",
