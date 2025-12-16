@@ -20,6 +20,21 @@ async function resolveBrowserLaunchOptions() {
     };
   }
 
+  // Non-serverless but with bundled chromium (e.g., Render/Heroku)
+  try {
+    const execPath = await chromium.executablePath();
+    if (execPath) {
+      return {
+        args: chromium.args,
+        executablePath: execPath,
+        headless: true,
+        defaultViewport: chromium.defaultViewport || {width: 1200, height: 800},
+      };
+    }
+  } catch (_) {
+    // ignore and continue to other fallbacks
+  }
+
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
     return {
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
